@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   causes: [String],
   charityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Charity' }],
   matchedCharityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Charity' }],
+  plaidLinked: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 })
 
