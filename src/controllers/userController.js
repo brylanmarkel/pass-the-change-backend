@@ -48,7 +48,10 @@ async function update(req, res) {
     const updates = {}
     if (onboardingAnswers) updates.onboardingAnswers = normalizeAnswers(onboardingAnswers)
     if (causes) updates.causes = causes
-    if (charityIds) updates.charityIds = charityIds
+    if (charityIds) {
+      updates.charityIds = charityIds
+      updates.plaidLinked = true
+    }
 
     let user = await findUser(userId)
     if (!user) return res.status(404).json({ error: 'User not found' })
