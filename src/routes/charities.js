@@ -4,7 +4,7 @@ const charityController = require('../controllers/charityController')
 
 const router = express.Router()
 
-router.get('/causes', requireAuth(), charityController.getCauseOptions)
+router.get('/causes', charityController.getCauseOptions)
 router.get('/', requireAuth(), charityController.getAll)
 router.get('/match/:userId', requireAuth(), charityController.matchForUser)
 
