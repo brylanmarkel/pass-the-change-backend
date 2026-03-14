@@ -15,7 +15,11 @@ const charitySchema = new mongoose.Schema({
   ageGroup: String,
   volunteerFriendly: { type: Boolean, default: false },
   logoUrl: String,
-  donateUrl: String
+  donateUrl: String,
+  embedding: [Number],
+  supporterCount: { type: Number, default: 0 },
+  color: String,
+  emoji: String
 })
 
 module.exports = mongoose.model('Charity', charitySchema)

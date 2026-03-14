@@ -3,6 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const mongoose = require('mongoose')
 
+const { authErrorHandler } = require('./middleware/authErrorHandler')
 const usersRouter = require('./routes/users')
 const plaidRouter = require('./routes/plaid')
 const charitiesRouter = require('./routes/charities')
@@ -21,6 +22,13 @@ app.use('/donations', donationsRouter)
 app.use('/impact', impactRouter)
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
+
+app.use(authErrorHandler)
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err)
+  console.error('Unhandled error:', err.message)
+  res.status(500).json({ error: 'Server error' })
+})
 
 const PORT = process.env.PORT || 3000
 

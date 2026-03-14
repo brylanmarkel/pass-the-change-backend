@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   onboardingAnswers: [String],
   causes: [String],
   charityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Charity' }],
+  matchedCharityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Charity' }],
   createdAt: { type: Date, default: Date.now }
 })
 
