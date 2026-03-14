@@ -4,32 +4,24 @@ const Charity = require('../models/Charity')
 const User = require('../models/User')
 const manus = require('../services/manus')
 
-const MOCK_DONATIONS = [
-  {
-    id: 'mock-1',
-    _id: 'mock-1',
-    amount: 0.47,
-    triggeredAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+const MOCK_AMOUNTS = [0.47, 0.83, 0.62]
+const MOCK_DAYS_AGO = [7, 14, 21]
+
+function buildMockDonations(charities) {
+  return charities.slice(0, 3).map((charity, i) => ({
+    id: `mock-${i + 1}`,
+    _id: `mock-${i + 1}`,
+    amount: MOCK_AMOUNTS[i],
+    triggeredAt: new Date(Date.now() - MOCK_DAYS_AGO[i] * 24 * 60 * 60 * 1000),
     status: 'completed',
-    charityId: { name: 'Greater Chicago Food Depository', category: 'Food' }
-  },
-  {
-    id: 'mock-2',
-    _id: 'mock-2',
-    amount: 0.83,
-    triggeredAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    status: 'completed',
-    charityId: { name: 'Chicago Coalition for the Homeless', category: 'Housing' }
-  },
-  {
-    id: 'mock-3',
-    _id: 'mock-3',
-    amount: 0.62,
-    triggeredAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
-    status: 'completed',
-    charityId: { name: 'Thresholds', category: 'Mental Health' }
-  }
-]
+    charityId: {
+      _id: charity._id,
+      name: charity.name,
+      category: charity.category,
+      logoUrl: charity.logoUrl
+    }
+  }))
+}
 
 async function create(req, res) {
   try {
@@ -63,20 +55,35 @@ async function getByUser(req, res) {
   try {
     const { userId } = req.params
 
-    // Resolve Clerk ID to MongoDB _id
-    let mongoUserId = userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      const user = await User.findOne({ clerkId: userId })
-      mongoUserId = user ? user._id : null
+    // Resolve Clerk ID → User doc
+    let user = null
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      user = await User.findById(userId)
+    }
+    if (!user) {
+      user = await User.findOne({ clerkId: userId })
     }
 
-    const donations = mongoUserId
+    const mongoUserId = user?._id ?? null
+
+    const realDonations = mongoUserId
       ? await Donation.find({ userId: mongoUserId }).sort({ triggeredAt: -1 }).populate('charityId')
       : []
 
-    // Return mock donations alongside real ones for demo
-    const combined = [...donations, ...MOCK_DONATIONS]
-    res.json(combined)
+    // Build mock donations from user's matched charities so they feel personal
+    let mockDonations = []
+    if (realDonations.length === 0 && user) {
+      const charityIds = user.matchedCharityIds?.length
+        ? user.matchedCharityIds
+        : user.charityIds
+
+      if (charityIds?.length) {
+        const charities = await Charity.find({ _id: { $in: charityIds } }).limit(3)
+        mockDonations = buildMockDonations(charities)
+      }
+    }
+
+    res.json([...realDonations, ...mockDonations])
   } catch (err) {
     console.error('getByUser donation error:', err.message)
     res.status(500).json({ error: 'Server error' })
