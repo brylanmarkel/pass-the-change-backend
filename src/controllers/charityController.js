@@ -2,6 +2,7 @@ const Charity = require('../models/Charity')
 const User = require('../models/User')
 const { runMatchAndSave } = require('../services/charityMatch')
 const { toFrontendShape } = require('../utils/charityShape')
+const { normalizeAnswers } = require('../utils/normalizeAnswers')
 
 const CAUSE_OPTIONS = [
   'Addiction Recovery', 'Animal', 'Arts & Culture', 'Criminal Justice',
@@ -33,11 +34,18 @@ async function matchForUser(req, res) {
       (await User.findById(userId)) ?? (await User.findOne({ clerkId: userId }))
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    const { charities } = await runMatchAndSave(user._id, user.onboardingAnswers, user.causes)
+    const answers = normalizeAnswers(user.onboardingAnswers)
+    let charities = []
+    try {
+      const result = await runMatchAndSave(user._id, answers, user.causes || [])
+      charities = result.charities || []
+    } catch (matchErr) {
+      console.error('runMatchAndSave error:', matchErr.message, matchErr.stack)
+    }
     const shaped = charities.map((c) => toFrontendShape(c))
     res.json(shaped)
   } catch (err) {
-    console.error('matchForUser error:', err.message)
+    console.error('matchForUser error:', err.message, err.stack)
     res.status(500).json({ error: 'Server error' })
   }
 }

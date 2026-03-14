@@ -12,14 +12,15 @@ const MATCH_LIMIT = 10
 const NUM_CANDIDATES = 50
 
 function keywordMatchFallback(charities, causes, onboardingAnswers, limit) {
+  const answers = Array.isArray(onboardingAnswers) ? onboardingAnswers : onboardingAnswers ? Object.values(onboardingAnswers) : []
   const scored = charities.map((charity) => {
     let score = 0
     if (causes && causes.length > 0 && charity.category) {
       const userCauseLower = causes.map((c) => c.toLowerCase().trim())
       if (userCauseLower.includes(charity.category.toLowerCase())) score += 3
     }
-    if (onboardingAnswers && onboardingAnswers.length > 0) {
-      const keywords = onboardingAnswers
+    if (answers && answers.length > 0) {
+      const keywords = answers
         .join(' ')
         .toLowerCase()
         .split(/\s+/)
@@ -40,7 +41,8 @@ function keywordMatchFallback(charities, causes, onboardingAnswers, limit) {
  * Returns { charities, charityIds } (top 10). Saves to user if userId provided.
  */
 async function runMatchAndSave(userId, onboardingAnswers, causes) {
-  const queryParts = [...(causes || []), ...(onboardingAnswers || [])].filter(Boolean)
+  const answers = Array.isArray(onboardingAnswers) ? onboardingAnswers : onboardingAnswers ? Object.values(onboardingAnswers) : []
+  const queryParts = [...(causes || []), ...answers].filter(Boolean)
   const queryText = queryParts.join('. ').trim() || 'Chicago nonprofit charity'
 
   let charities = []
@@ -74,14 +76,22 @@ async function runMatchAndSave(userId, onboardingAnswers, causes) {
   }
 
   if (charities.length === 0) {
-    const all = await Charity.find()
-    charities = keywordMatchFallback(all, causes, onboardingAnswers, MATCH_LIMIT)
+    try {
+      const all = await Charity.find()
+      charities = keywordMatchFallback(all, causes, onboardingAnswers, MATCH_LIMIT)
+    } catch (kwErr) {
+      console.warn('Keyword match fallback error:', kwErr.message)
+    }
   }
 
   const charityIds = charities.map((c) => c._id)
 
   if (userId && charityIds.length > 0) {
-    await User.findByIdAndUpdate(userId, { $set: { matchedCharityIds: charityIds } })
+    try {
+      await User.findByIdAndUpdate(userId, { $set: { matchedCharityIds: charityIds } })
+    } catch (upErr) {
+      console.warn('Save matchedCharityIds error:', upErr.message)
+    }
   }
 
   return { charities, charityIds }

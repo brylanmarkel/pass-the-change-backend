@@ -1,13 +1,6 @@
 const User = require('../models/User')
 const { runMatchAndSave } = require('../services/charityMatch')
-
-function normalizeAnswers(onboardingAnswers) {
-  if (!onboardingAnswers) return []
-  if (Array.isArray(onboardingAnswers)) return onboardingAnswers
-  // If sent as an object {cityAnswer: "...", q2: "..."}, extract the values
-  if (typeof onboardingAnswers === 'object') return Object.values(onboardingAnswers)
-  return []
-}
+const { normalizeAnswers } = require('../utils/normalizeAnswers')
 
 async function onboarding(req, res) {
   try {
@@ -51,9 +44,9 @@ async function update(req, res) {
     let user = await User.findByIdAndUpdate(userId, updates, { new: true })
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    const answers = updates.onboardingAnswers ?? user.onboardingAnswers
+    const answers = normalizeAnswers(updates.onboardingAnswers ?? user.onboardingAnswers)
     const userCauses = updates.causes ?? user.causes
-    if (answers && answers.length >= 4) {
+    if (answers.length >= 4) {
       const { charityIds } = await runMatchAndSave(userId, answers, userCauses)
       user = await User.findByIdAndUpdate(userId, { $set: { matchedCharityIds: charityIds } }, { new: true })
     }
