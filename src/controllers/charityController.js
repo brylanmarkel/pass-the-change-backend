@@ -1,3 +1,4 @@
+const mongoose = require('mongoose')
 const Charity = require('../models/Charity')
 const User = require('../models/User')
 const { runMatchAndSave } = require('../services/charityMatch')
@@ -30,8 +31,10 @@ async function matchForUser(req, res) {
   try {
     const { userId } = req.params
 
+    // Always look up by clerkId first (Clerk IDs start with "user_" and are not valid ObjectIds)
     const user =
-      (await User.findById(userId)) ?? (await User.findOne({ clerkId: userId }))
+      (await User.findOne({ clerkId: userId })) ??
+      (mongoose.Types.ObjectId.isValid(userId) ? await User.findById(userId) : null)
     if (!user) return res.status(404).json({ error: 'User not found' })
 
     const answers = normalizeAnswers(user.onboardingAnswers)
