@@ -1,22 +1,32 @@
 const User = require('../models/User')
 const { runMatchAndSave } = require('../services/charityMatch')
 
+function normalizeAnswers(onboardingAnswers) {
+  if (!onboardingAnswers) return []
+  if (Array.isArray(onboardingAnswers)) return onboardingAnswers
+  // If sent as an object {cityAnswer: "...", q2: "..."}, extract the values
+  if (typeof onboardingAnswers === 'object') return Object.values(onboardingAnswers)
+  return []
+}
+
 async function onboarding(req, res) {
   try {
-    const { clerkId, name, email, onboardingAnswers, causes } = req.body
+    const { clerkId, name, email, onboardingAnswers: rawAnswers, causes } = req.body
 
     if (!clerkId || !name || !email) {
       return res.status(400).json({ error: 'clerkId, name, and email are required' })
     }
+
+    const onboardingAnswers = normalizeAnswers(rawAnswers)
 
     const existing = await User.findOne({ clerkId })
     if (existing) {
       return res.status(200).json(existing)
     }
 
-    const user = await User.create({ clerkId, name, email, onboardingAnswers: onboardingAnswers || [], causes: causes || [] })
+    const user = await User.create({ clerkId, name, email, onboardingAnswers, causes: causes || [] })
 
-    if (onboardingAnswers && onboardingAnswers.length >= 4) {
+    if (onboardingAnswers.length >= 4) {
       const { charityIds } = await runMatchAndSave(user._id, onboardingAnswers, causes)
       user.matchedCharityIds = charityIds
     }
@@ -34,7 +44,7 @@ async function update(req, res) {
     const { onboardingAnswers, causes, charityIds } = req.body
 
     const updates = {}
-    if (onboardingAnswers) updates.onboardingAnswers = onboardingAnswers
+    if (onboardingAnswers) updates.onboardingAnswers = normalizeAnswers(onboardingAnswers)
     if (causes) updates.causes = causes
     if (charityIds) updates.charityIds = charityIds
 
