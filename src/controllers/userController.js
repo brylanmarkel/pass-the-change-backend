@@ -2,7 +2,7 @@ const User = require('../models/User')
 
 async function onboarding(req, res) {
   try {
-    const { clerkId, name, email, onboardingAnswers } = req.body
+    const { clerkId, name, email, onboardingAnswers, causes } = req.body
 
     if (!clerkId || !name || !email) {
       return res.status(400).json({ error: 'clerkId, name, and email are required' })
@@ -13,7 +13,7 @@ async function onboarding(req, res) {
       return res.status(200).json(existing)
     }
 
-    const user = await User.create({ clerkId, name, email, onboardingAnswers: onboardingAnswers || [] })
+    const user = await User.create({ clerkId, name, email, onboardingAnswers: onboardingAnswers || [], causes: causes || [] })
     res.status(201).json(user)
   } catch (err) {
     console.error('onboarding error:', err.message)
@@ -24,10 +24,11 @@ async function onboarding(req, res) {
 async function update(req, res) {
   try {
     const { userId } = req.params
-    const { onboardingAnswers, charityIds } = req.body
+    const { onboardingAnswers, causes, charityIds } = req.body
 
     const updates = {}
     if (onboardingAnswers) updates.onboardingAnswers = onboardingAnswers
+    if (causes) updates.causes = causes
     if (charityIds) updates.charityIds = charityIds
 
     const user = await User.findByIdAndUpdate(userId, updates, { new: true })
